@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body { @apply bg-chalk text-ink font-sans antialiased; text-rendering: optimizeLegibility; }
+  :focus-visible { outline: 3px solid #FFC72C; outline-offset: 2px; border-radius: 8px; }
+  input, textarea, select { font-size: 16px; } /* evita zoom no iOS */
+  .font-display { font-feature-settings: 'tnum' 1; letter-spacing: -0.005em; }
+}
+
+@layer utilities {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .pitch-lines {
+    background-image:
+      radial-gradient(circle at 50% 50%, transparent 0 88px, rgba(242,244,241,.10) 89px 91px, transparent 92px),
+      linear-gradient(90deg, transparent calc(50% - 1px), rgba(242,244,241,.10) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 48px, transparent 48px 96px);
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}
