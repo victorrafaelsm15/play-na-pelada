@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Send } from 'lucide-react';
+import { Check, Send, UserPlus } from 'lucide-react';
 import { useMe } from '@/stores/session';
 import { errorMessage, services } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
@@ -7,17 +7,36 @@ import { toast } from '@/stores/toast';
 import { Sheet } from '@/components/ui/Sheet';
 import { Segmented } from '@/components/ui/Controls';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Field';
 import { PlayerRow } from '@/components/app/PlayerRow';
 import { UserSearch } from '@/components/app/UserSearch';
 import type { PublicUser } from '@/types';
 
-/** Convidar amigos ou qualquer usuário (nome, @ ou ID); opcionalmente adicionar direto. */
+/** Convidar amigos ou qualquer usuário (nome, @ ou ID); opcionalmente adicionar direto ou incluir jogador avulso sem conta. */
 export function InviteSheet({ eventId, open, onClose, excludeIds, canAddDirectly, onChanged }: { eventId: string; open: boolean; onClose(): void; excludeIds: string[]; canAddDirectly: boolean; onChanged(): void }) {
   const me = useMe();
-  const [tab, setTab] = useState<'amigos' | 'buscar'>('amigos');
+  const [tab, setTab] = useState<'amigos' | 'buscar' | 'avulso'>('amigos');
   const [done, setDone] = useState<Record<string, 'invited' | 'added'>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [guestName, setGuestName] = useState('');
+  const [guestBusy, setGuestBusy] = useState(false);
   const friends = useAsync(() => (open ? services.users.listFriends(me.id) : Promise.resolve([])), [open, me.id]);
+
+  const addGuest = async () => {
+    const name = guestName.trim();
+    if (!name) return;
+    setGuestBusy(true);
+    try {
+      await services.events.addGuestPlayer(me.id, eventId, name);
+      toast.success(`${name.split(' ')[0]} entrou na lista`);
+      setGuestName('');
+      onChanged();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setGuestBusy(false);
+    }
+  };
 
   const act = async (u: PublicUser, kind: 'invite' | 'add') => {
     setBusy(u.id + kind);
@@ -46,15 +65,36 @@ export function InviteSheet({ eventId, open, onClose, excludeIds, canAddDirectly
 
   const availableFriends = (friends.data ?? []).filter((f) => !excludeIds.includes(f.id));
 
+  const tabs = [
+    { value: 'amigos' as const, label: 'Amigos' },
+    { value: 'buscar' as const, label: 'Buscar' },
+    ...(canAddDirectly ? [{ value: 'avulso' as const, label: 'Avulso' }] : [])
+  ];
+
   return (
     <Sheet open={open} onClose={onClose} title="Chamar jogadores">
-      <Segmented value={tab} onChange={setTab} options={[{ value: 'amigos', label: 'Amigos' }, { value: 'buscar', label: 'Buscar' }]} className="mb-3" />
+      <Segmented value={tab} onChange={setTab} options={tabs} className="mb-3" />
       {tab === 'amigos' ? (
         friends.loading ? <p className="py-6 text-center text-ink-muted">Carregando amigos…</p> :
         availableFriends.length ? <div className="divide-y divide-chalk-line">{availableFriends.map((u) => <PlayerRow key={u.id} user={u} link={false} actions={actions(u)} />)}</div> :
         <p className="py-6 text-center text-sm text-ink-muted">Todos os seus amigos já estão na pelada. Use a busca para chamar outras pessoas.</p>
-      ) : (
+      ) : tab === 'buscar' ? (
         <UserSearch excludeIds={[...excludeIds, me.id]} renderActions={actions} />
+      ) : (
+        <div>
+          <p className="mb-3 text-sm text-ink-muted">Adicione quem não tem conta no app, só com o nome. Você pode remover depois.</p>
+          <div className="flex items-end gap-2">
+            <Input
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              placeholder="Nome do jogador"
+              aria-label="Nome do jogador avulso"
+              onKeyDown={(e) => e.key === 'Enter' && addGuest()}
+              className="flex-1"
+            />
+            <Button variant="dark" loading={guestBusy} disabled={!guestName.trim()} onClick={addGuest}><UserPlus size={16} />Adicionar</Button>
+          </div>
+        </div>
       )}
     </Sheet>
   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Check, History, MoreVertical, Pencil, Play, Shuffle, Trash2, UserPlus, X } from 'lucide-react';
-import type { ParticipantRole, Team } from '@/types';
+import { Check, History, MoreVertical, Pencil, Play, Shuffle, Trash2, UserCog, UserPlus, X } from 'lucide-react';
+import type { ParticipantRole, PublicUser, Team } from '@/types';
 import { errorMessage, services, type ParticipantView } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { invalidate } from '@/stores/refresh';
@@ -13,6 +13,7 @@ import { teamStyle } from '@/domain/teamDraw';
 import { formatClock } from '@/domain/timer';
 import { PageHeader } from '@/components/app/PageHeader';
 import { PlayerRow } from '@/components/app/PlayerRow';
+import { UserSearch } from '@/components/app/UserSearch';
 import { Segmented } from '@/components/ui/Controls';
 import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState, ErrorState, Skeleton } from '@/components/ui/States';
@@ -36,9 +37,11 @@ export default function ManageEvent() {
   const { me, event, participants, confirmed, pending, invited, role, allows, reload } = ctx;
   const [target, setTarget] = useState<ParticipantView | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [shared, setShared] = useState<Record<string, true>>({});
 
   if (event.loading || participants.loading) return <div className="space-y-3 pt-4"><Skeleton className="h-10 w-2/3" /><Skeleton className="h-12" /><Skeleton className="h-72" /></div>;
   if (event.error || !event.data) return <div><PageHeader title="Gerenciar" back /><ErrorState message={event.error ?? 'Pelada não encontrada.'} /></div>;
@@ -147,6 +150,9 @@ export default function ManageEvent() {
                 {(['owner', ...ASSIGNABLE_ROLES] as ParticipantRole[]).map((r) => <li key={r}><span className="font-semibold text-ink">{ROLE_LABEL[r]}:</span> {ROLE_HINT[r]}</li>)}
               </ul>
             </div>
+            {allows('roles.assign') && (
+              <button onClick={() => setShareOpen(true)} className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left font-semibold shadow-lift"><UserCog size={20} className="text-turf-700" />Compartilhar organização</button>
+            )}
             {allows('event.delete') && (
               <button onClick={() => setDeleteOpen(true)} className="flex w-full items-center gap-3 rounded-2xl bg-whistle-soft p-4 font-semibold text-whistle"><Trash2 size={20} />Excluir pelada</button>
             )}
@@ -157,7 +163,7 @@ export default function ManageEvent() {
       <Sheet open={!!target} onClose={() => setTarget(null)} title={target?.user.name}>
         {target && (
           <div>
-            {allows('roles.assign') && (
+            {allows('roles.assign') && !target.user.isGuest && (
               <>
                 <p className="mb-2 text-sm font-semibold text-ink-soft">Papel na pelada</p>
                 <div className="space-y-2">
@@ -201,6 +207,31 @@ export default function ManageEvent() {
         onConfirm={async () => { if (await run('delete', () => services.events.remove(me.id, e.id), 'Pelada excluída')) navigate('/peladas?aba=minhas', { replace: true }); }}
       />
       <InviteSheet eventId={e.id} open={inviteOpen} onClose={() => setInviteOpen(false)} excludeIds={confirmed.map((p) => p.userId)} canAddDirectly={allows('players.manage')} onChanged={reload} />
+
+      <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Compartilhar organização">
+        <p className="mb-3 text-sm text-ink-muted">A pessoa passa a editar a pelada, gerenciar jogadores e controlar partidas, mesmo que ainda não esteja na lista.</p>
+        <UserSearch
+          excludeIds={[...confirmed.filter((p) => p.role === 'owner' || p.role === 'organizer').map((p) => p.userId), me.id]}
+          renderActions={(u: PublicUser) =>
+            shared[u.id] ? (
+              <span className="flex items-center gap-1 text-sm font-semibold text-turf-700"><Check size={16} />Organizador</span>
+            ) : (
+              <Button
+                size="sm"
+                variant="dark"
+                loading={busy === `share-${u.id}`}
+                onClick={async () => {
+                  if (await run(`share-${u.id}`, () => services.events.addOrganizer(me.id, e.id, u.id), `${u.name.split(' ')[0]} agora é organizador`)) {
+                    setShared((s) => ({ ...s, [u.id]: true }));
+                  }
+                }}
+              >
+                <UserCog size={15} />Tornar organizador
+              </Button>
+            )
+          }
+        />
+      </Sheet>
     </div>
   );
 }

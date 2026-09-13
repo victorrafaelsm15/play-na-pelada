@@ -156,6 +156,7 @@ const users: UserService = {
     if (!q) return [];
     return db.read((d) =>
       d.users
+        .filter((u) => !u.isGuest)
         .filter((u) => !excludeIds.includes(u.id))
         .filter((u) => norm(u.name).includes(q) || norm(u.username).includes(q) || u.publicId.startsWith(q))
         .slice(0, 20)
@@ -368,14 +369,34 @@ const events: EventService = {
       recomputeStatus(d, e);
     });
   },
+  async addGuestPlayer(actorId, eventId, name) {
+    await latency(400);
+    db.write((d) => {
+      assertCan(d, eventId, actorId, 'players.manage');
+      const e = findEvent(d, eventId);
+      const trimmed = name.trim();
+      if (!trimmed) throw new AppError('VALIDATION', 'Informe um nome.', 'name');
+      const confirmed = d.participants.filter((p) => p.eventId === eventId && p.status === 'confirmed').length;
+      if (confirmed >= e.maxPlayers) throw new AppError('EVENT_FULL', 'A lista está completa.');
+      const guest: User = {
+        id: uid('guest'), publicId: '', username: '', name: trimmed, email: '',
+        socialLinks: { others: [] }, titles: [], videos: [], isGuest: true, createdAt: new Date().toISOString()
+      };
+      d.users.push(guest);
+      d.participants.push({ eventId, userId: guest.id, role: 'player', status: 'confirmed', joinedAt: new Date().toISOString() });
+      recomputeStatus(d, e);
+    });
+  },
   async removePlayer(actorId, eventId, userId) {
     await latency(400);
     db.write((d) => {
       assertCan(d, eventId, actorId, 'players.manage');
       const e = findEvent(d, eventId);
       if (e.organizerId === userId) throw new AppError('FORBIDDEN', 'O dono não pode ser removido.');
+      const user = d.users.find((u) => u.id === userId);
       d.participants = d.participants.filter((p) => !(p.eventId === eventId && p.userId === userId));
       d.teams.filter((t) => t.eventId === eventId).forEach((t) => (t.playerIds = t.playerIds.filter((id) => id !== userId)));
+      if (user?.isGuest) d.users = d.users.filter((u) => u.id !== userId);
       recomputeStatus(d, e);
     });
   },
@@ -404,7 +425,27 @@ const events: EventService = {
       if (role === 'owner') throw new AppError('FORBIDDEN', 'A posse da pelada não pode ser transferida por aqui.');
       const p = d.participants.find((x) => x.eventId === eventId && x.userId === userId);
       if (!p || p.role === 'owner') throw new AppError('FORBIDDEN', 'Não é possível alterar este papel.');
+      if (role !== 'player' && findUser(d, userId).isGuest) throw new AppError('FORBIDDEN', 'Um jogador avulso não pode ter esse papel.');
       p.role = role;
+    });
+  },
+  async addOrganizer(actorId, eventId, userId) {
+    await latency(400);
+    db.write((d) => {
+      assertCan(d, eventId, actorId, 'roles.assign');
+      const e = findEvent(d, eventId);
+      const user = findUser(d, userId);
+      if (user.isGuest) throw new AppError('FORBIDDEN', 'Um jogador avulso não pode ser organizador.');
+      const existing = d.participants.find((p) => p.eventId === eventId && p.userId === userId);
+      if (existing) {
+        if (existing.role === 'owner') throw new AppError('FORBIDDEN', 'Não é possível alterar este papel.');
+        existing.status = 'confirmed';
+        existing.role = 'organizer';
+      } else {
+        d.participants.push({ eventId, userId, role: 'organizer', status: 'confirmed', joinedAt: new Date().toISOString() });
+      }
+      notify(d, { userId, type: 'added_to_event', title: 'Você agora é organizador', body: `Você recebeu acesso de organizador em ${e.name}.`, link: `/peladas/${e.id}/gerenciar`, actorId });
+      recomputeStatus(d, e);
     });
   },
   async invite(actorId, eventId, receiverId) {

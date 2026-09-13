@@ -77,9 +77,13 @@ export interface EventService {
   join(eventId: string, userId: string): Promise<Participant>;
   leave(eventId: string, userId: string): Promise<void>;
   addPlayer(actorId: string, eventId: string, userId: string): Promise<void>;
+  /** Adiciona um jogador avulso, sem conta no app, identificado só pelo nome. */
+  addGuestPlayer(actorId: string, eventId: string, name: string): Promise<void>;
   removePlayer(actorId: string, eventId: string, userId: string): Promise<void>;
   reviewRequest(actorId: string, eventId: string, userId: string, approve: boolean): Promise<void>;
   setRole(actorId: string, eventId: string, userId: string, role: ParticipantRole): Promise<void>;
+  /** Concede acesso de organizador diretamente a um usuário, mesmo que ainda não esteja na lista. */
+  addOrganizer(actorId: string, eventId: string, userId: string): Promise<void>;
   invite(actorId: string, eventId: string, receiverId: string): Promise<void>;
   listInvitations(userId: string): Promise<InvitationView[]>;
   respondInvitation(userId: string, invitationId: string, accept: boolean): Promise<void>;

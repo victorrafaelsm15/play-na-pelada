@@ -48,6 +48,8 @@ export interface User {
   videos: VideoLink[];
   /** Reservado para sorteio equilibrado (1–5). Não exposto na UI na v1. */
   skill?: number;
+  /** Jogador avulso sem conta, adicionado só com o nome pelo organizador de uma pelada. */
+  isGuest?: boolean;
   createdAt: string;
 }
 
