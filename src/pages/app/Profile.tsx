@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Award, Instagram, Link2, MessageCircle, Pencil, PlayCircle, Settings, UserCheck, UserPlus, Clock } from 'lucide-react';
+import { Award, Instagram, Link2, Pencil, PlayCircle, Settings, UserCheck, UserPlus, Clock } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/app/WhatsAppIcon';
 import type { PublicUser } from '@/types';
 import { useMe } from '@/stores/session';
 import { errorMessage, services } from '@/services';
@@ -151,9 +152,30 @@ function ProfileView({ user, isMe }: { user: PublicUser; isMe: boolean }) {
         <section className="mt-6">
           <h2 className="mb-2 font-display text-2xl font-bold">Contato</h2>
           <div className="flex flex-wrap gap-2">
-            {user.socialLinks.instagram && <a href={`https://instagram.com/${user.socialLinks.instagram.replace(/^@/, '')}`} target="_blank" rel="noreferrer" className="flex h-11 items-center gap-2 rounded-xl bg-white px-4 font-semibold shadow-lift"><Instagram size={18} />@{user.socialLinks.instagram.replace(/^@/, '')}</a>}
-            {user.socialLinks.whatsapp && <a href={`https://wa.me/${user.socialLinks.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="flex h-11 items-center gap-2 rounded-xl bg-white px-4 font-semibold shadow-lift"><MessageCircle size={18} />WhatsApp</a>}
-            {user.socialLinks.others.map((l) => <a key={l.id} href={l.url} target="_blank" rel="noreferrer" className="flex h-11 items-center gap-2 rounded-xl bg-white px-4 font-semibold shadow-lift"><Link2 size={18} />{l.label}</a>)}
+            {user.socialLinks.instagram && (
+              <a
+                href={`https://instagram.com/${user.socialLinks.instagram.replace(/^@/, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-12 items-center gap-2 rounded-xl px-4 font-semibold text-white shadow-lift transition hover:brightness-110 hover:shadow-xl active:scale-[.97]"
+                style={{ background: 'linear-gradient(135deg,#4f5bd5,#962fbf,#d62976,#fa7e1e,#feda75)' }}
+              >
+                <Instagram size={19} />@{user.socialLinks.instagram.replace(/^@/, '')}
+              </a>
+            )}
+            {user.socialLinks.whatsapp && (
+              <a
+                href={`https://wa.me/${user.socialLinks.whatsapp.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-12 items-center gap-2 rounded-xl bg-[#25D366] px-4 font-semibold text-white shadow-lift transition hover:brightness-105 hover:shadow-xl active:scale-[.97]"
+              >
+                <WhatsAppIcon size={19} />WhatsApp
+              </a>
+            )}
+            {user.socialLinks.others.map((l) => (
+              <a key={l.id} href={l.url} target="_blank" rel="noreferrer" className="flex h-12 items-center gap-2 rounded-xl bg-white px-4 font-semibold shadow-lift transition hover:shadow-xl active:scale-[.97]"><Link2 size={18} />{l.label}</a>
+            ))}
           </div>
         </section>
       ) : null}

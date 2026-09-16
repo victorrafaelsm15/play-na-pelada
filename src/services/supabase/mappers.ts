@@ -63,7 +63,7 @@ export function mapInvitation(row: any): Invitation {
 }
 
 export function mapTeam(row: any): Team {
-  return { id: row.id, eventId: row.event_id, name: row.name, color: row.color, playerIds: row.player_ids ?? [] };
+  return { id: row.id, eventId: row.event_id, name: row.name, color: row.color, playerIds: row.player_ids ?? [], orderIndex: row.order_index ?? 0 };
 }
 
 export function mapRotation(row: any): Rotation {

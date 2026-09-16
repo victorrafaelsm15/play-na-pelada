@@ -92,6 +92,12 @@ export interface EventService {
 export interface GameService {
   getTeams(eventId: string): Promise<Team[]>;
   saveTeams(actorId: string, eventId: string, teams: Team[]): Promise<Rotation>;
+  /** Renomeia um time já salvo, sem afetar o sorteio ou o histórico de partidas. */
+  renameTeam(actorId: string, teamId: string, name: string): Promise<Team>;
+  /** Define a ordem de exibição/sequência dos times de um evento. */
+  reorderTeams(actorId: string, eventId: string, orderedTeamIds: string[]): Promise<void>;
+  /** Substitui a escalação de um time (remover/adicionar/mover jogador) sem re-sortear. */
+  updateTeamRoster(actorId: string, teamId: string, playerIds: string[]): Promise<Team>;
   getRotation(eventId: string): Promise<Rotation | null>;
   listGames(eventId: string): Promise<Game[]>;
   getCurrentGame(eventId: string): Promise<Game | null>;

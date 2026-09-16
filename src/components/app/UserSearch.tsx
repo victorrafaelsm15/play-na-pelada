@@ -23,7 +23,7 @@ export function UserSearch({ excludeIds = [], renderActions, placeholder = 'Nome
         ) : res.loading ? (
           <div className="space-y-3 py-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-12" />)}</div>
         ) : res.data?.length ? (
-          <div className="divide-y divide-chalk-line">{res.data.map((u) => <PlayerRow key={u.id} user={u} link={false} actions={renderActions(u)} />)}</div>
+          <div className="divide-y divide-chalk-line">{res.data.map((u) => <PlayerRow key={u.id} user={u} actions={renderActions(u)} />)}</div>
         ) : (
           <p className="py-4 text-center text-sm text-ink-muted">Nenhum jogador encontrado para “{dq}”.</p>
         )}

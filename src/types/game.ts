@@ -7,6 +7,8 @@ export interface Team {
   name: string;
   color: TeamColor;
   playerIds: UserId[];
+  /** Ordem de exibição/sequência dos times (menor primeiro). */
+  orderIndex?: number;
 }
 
 export type TeamColor = 'amarelo' | 'branco' | 'verde' | 'vermelho' | 'azul' | 'preto' | 'laranja' | 'roxo';

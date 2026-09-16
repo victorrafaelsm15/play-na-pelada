@@ -6,6 +6,7 @@ import { invalidate } from '@/stores/refresh';
 import { toast } from '@/stores/toast';
 import { useEvent } from '@/features/pelada/useEvent';
 import { InviteSheet } from '@/features/pelada/InviteSheet';
+import { TeamsPanel } from '@/features/pelada/TeamsPanel';
 import { ROLE_LABEL, canManage } from '@/domain/permissions';
 import { ROTATION_LABEL } from '@/domain/rotation';
 import { formatDay, formatMoney, STATUS_LABEL } from '@/lib/format';
@@ -140,6 +141,12 @@ export default function EventDetail() {
       <section className="mt-4">
         <MapPreview location={e.location} />
       </section>
+
+      {(teams.data?.length ?? 0) >= 2 && (
+        <section className="mt-6">
+          <TeamsPanel teams={teams.data!} confirmed={confirmed} canEdit={allows('teams.draw')} canManageRoster={allows('players.manage')} onChanged={teams.reload} />
+        </section>
+      )}
 
       <section className="mt-6">
         <div className="mb-2 flex items-center justify-between">

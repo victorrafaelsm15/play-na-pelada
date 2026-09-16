@@ -495,17 +495,51 @@ const events: EventService = {
 const games: GameService = {
   async getTeams(eventId) {
     await latency(250);
-    return db.read((d) => d.teams.filter((t) => t.eventId === eventId));
+    return db.read((d) => d.teams.filter((t) => t.eventId === eventId).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)));
   },
   async saveTeams(actorId, eventId, teams) {
     await latency(400);
     return db.write((d) => {
       assertCan(d, eventId, actorId, 'teams.draw');
-      d.teams = d.teams.filter((t) => t.eventId !== eventId).concat(teams);
-      const rotation = { eventId, queue: teams.map((t) => t.id) };
+      const keepIds = new Set(d.games.filter((g) => g.eventId === eventId).flatMap((g) => [g.teamAId, g.teamBId]));
+      const fresh = teams.map((t, i) => ({ ...t, id: uid('team'), orderIndex: i }));
+      d.teams = d.teams.filter((t) => t.eventId !== eventId || keepIds.has(t.id)).concat(fresh);
+      const rotation = { eventId, queue: fresh.map((t) => t.id) };
       d.rotations = d.rotations.filter((r) => r.eventId !== eventId).concat(rotation);
       d.games = d.games.filter((g) => !(g.eventId === eventId && g.status !== 'finished'));
       return rotation;
+    });
+  },
+  async renameTeam(actorId, teamId, name) {
+    await latency(300);
+    return db.write((d) => {
+      const t = d.teams.find((x) => x.id === teamId);
+      if (!t) throw new AppError('NOT_FOUND', 'Time não encontrado.');
+      assertCan(d, t.eventId, actorId, 'teams.draw');
+      const trimmed = name.trim();
+      if (!trimmed) throw new AppError('VALIDATION', 'Informe um nome.');
+      t.name = trimmed;
+      return t;
+    });
+  },
+  async reorderTeams(actorId, eventId, orderedTeamIds) {
+    await latency(300);
+    db.write((d) => {
+      assertCan(d, eventId, actorId, 'teams.draw');
+      orderedTeamIds.forEach((id, i) => {
+        const t = d.teams.find((x) => x.id === id && x.eventId === eventId);
+        if (t) t.orderIndex = i;
+      });
+    });
+  },
+  async updateTeamRoster(actorId, teamId, playerIds) {
+    await latency(350);
+    return db.write((d) => {
+      const t = d.teams.find((x) => x.id === teamId);
+      if (!t) throw new AppError('NOT_FOUND', 'Time não encontrado.');
+      assertCan(d, t.eventId, actorId, 'players.manage');
+      t.playerIds = playerIds;
+      return t;
     });
   },
   async getRotation(eventId) {

@@ -279,12 +279,23 @@ const events: EventService = {
 // ————————————————————————————————— Games
 const games: GameService = {
   async getTeams(eventId) {
-    const rows = await q(supabase.from('teams').select('*').eq('event_id', eventId));
+    const rows = await q(supabase.from('teams').select('*').eq('event_id', eventId).order('order_index'));
     return (rows ?? []).map(mapTeam);
   },
   async saveTeams(_actorId, eventId, teams) {
     const row = await call<any>('save_teams', { p_event_id: eventId, p_teams: teams.map(teamToRpc) });
     return mapRotation(row);
+  },
+  async renameTeam(_actorId, teamId, name) {
+    const row = await call<any>('rename_team', { p_team_id: teamId, p_name: name });
+    return mapTeam(row);
+  },
+  async reorderTeams(_actorId, eventId, orderedTeamIds) {
+    await call('reorder_teams', { p_event_id: eventId, p_ordered_ids: orderedTeamIds });
+  },
+  async updateTeamRoster(_actorId, teamId, playerIds) {
+    const row = await call<any>('update_team_roster', { p_team_id: teamId, p_player_ids: playerIds });
+    return mapTeam(row);
   },
   async getRotation(eventId) {
     const rows = await q(supabase.from('rotations').select('*').eq('event_id', eventId));

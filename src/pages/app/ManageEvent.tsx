@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Check, History, MoreVertical, Pencil, Play, Shuffle, Trash2, UserCog, UserPlus, X } from 'lucide-react';
-import type { ParticipantRole, PublicUser, Team } from '@/types';
+import type { ParticipantRole, PublicUser } from '@/types';
 import { errorMessage, services, type ParticipantView } from '@/services';
 import { useAsync } from '@/hooks/useAsync';
 import { invalidate } from '@/stores/refresh';
 import { toast } from '@/stores/toast';
 import { useEvent } from '@/features/pelada/useEvent';
 import { InviteSheet } from '@/features/pelada/InviteSheet';
+import { TeamsPanel } from '@/features/pelada/TeamsPanel';
 import { ASSIGNABLE_ROLES, ROLE_LABEL, canManage } from '@/domain/permissions';
-import { teamStyle } from '@/domain/teamDraw';
 import { formatClock } from '@/domain/timer';
 import { PageHeader } from '@/components/app/PageHeader';
 import { PlayerRow } from '@/components/app/PlayerRow';
@@ -128,7 +128,7 @@ export default function ManageEvent() {
           )
         )}
 
-        {tab === 'partidas' && <GamesTab eventId={e.id} canDraw={allows('teams.draw')} canControl={allows('games.control')} onDraw={() => navigate(`/peladas/${e.id}/sorteio`)} onPlay={() => navigate(`/peladas/${e.id}/partida`)} />}
+        {tab === 'partidas' && <GamesTab eventId={e.id} canDraw={allows('teams.draw')} canManage={allows('players.manage')} canControl={allows('games.control')} onDraw={() => navigate(`/peladas/${e.id}/sorteio`)} onPlay={() => navigate(`/peladas/${e.id}/partida`)} />}
 
         {tab === 'ajustes' && (
           <div className="space-y-3">
@@ -236,12 +236,11 @@ export default function ManageEvent() {
   );
 }
 
-function GamesTab({ eventId, canDraw, canControl, onDraw, onPlay }: { eventId: string; canDraw: boolean; canControl: boolean; onDraw(): void; onPlay(): void }) {
+function GamesTab({ eventId, canDraw, canManage, canControl, onDraw, onPlay }: { eventId: string; canDraw: boolean; canManage: boolean; canControl: boolean; onDraw(): void; onPlay(): void }) {
   const teams = useAsync(() => services.games.getTeams(eventId), [eventId]);
   const games = useAsync(() => services.games.listGames(eventId), [eventId]);
   const participants = useAsync(() => services.events.getParticipants(eventId), [eventId]);
   const byId = (tid: string) => teams.data?.find((t) => t.id === tid);
-  const nameOf = (uid: string) => participants.data?.find((p) => p.userId === uid)?.user.name.split(' ')[0] ?? '—';
   const finished = (games.data ?? []).filter((g) => g.status === 'finished');
 
   if (teams.loading || games.loading) return <Skeleton className="h-64" />;
@@ -254,20 +253,13 @@ function GamesTab({ eventId, canDraw, canControl, onDraw, onPlay }: { eventId: s
       </div>
 
       {teams.data?.length ? (
-        <section>
-          <h3 className="mb-2 font-display text-xl font-bold">Times atuais</h3>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {teams.data.map((t: Team) => {
-              const s = teamStyle(t.color);
-              return (
-                <div key={t.id} className="rounded-2xl bg-white p-3 shadow-lift">
-                  <p className="flex items-center gap-2 font-semibold"><span className="h-4 w-4 rounded-full ring-1 ring-ink/15" style={{ background: s.hex }} />{t.name}</p>
-                  <p className="mt-1 text-sm text-ink-muted">{t.playerIds.map(nameOf).join(', ') || 'Sem jogadores'}</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <TeamsPanel
+          teams={teams.data}
+          confirmed={(participants.data ?? []).filter((p) => p.status === 'confirmed')}
+          canEdit={canDraw}
+          canManageRoster={canManage}
+          onChanged={teams.reload}
+        />
       ) : (
         <EmptyState icon={<Shuffle />} title="Times ainda não sorteados" description="Sorteie com os confirmados ou monte na mão." />
       )}

@@ -58,11 +58,6 @@ export default function Login() {
         {error && <p role="alert" className="rounded-xl bg-whistle-soft px-3 py-2.5 text-sm font-semibold text-whistle">{error}</p>}
         <Button type="submit" size="lg" block loading={loading}>Entrar</Button>
       </form>
-      <div className="mt-6 rounded-2xl bg-white p-4 text-sm text-ink-muted shadow-lift">
-        <p className="font-semibold text-ink">Conta de demonstração</p>
-        <p>demo@racha.app, senha racha123</p>
-        <button className="mt-2 font-semibold text-turf-700" onClick={() => { setIdentifier('demo@racha.app'); setPassword('racha123'); }}>Preencher</button>
-      </div>
       <p className="mt-6 text-center text-ink-muted">Ainda não tem conta? <Link to="/criar-conta" className="font-semibold text-turf-700">Criar conta</Link></p>
     </AuthShell>
   );
